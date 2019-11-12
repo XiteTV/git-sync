@@ -1,0 +1,41 @@
+jobs:
+- name: Build.Docker.Image
+  plan:
+  - get: source-code
+    trigger: true
+  - params:
+      annotate: version/number
+      bump: minor
+    put: version
+  - params:
+      build: source-code
+      tag: version/number
+      tag_as_latest: true
+    put: docker-image
+  serial: true
+resource_types:
+- name: gcs-resource
+  source:
+    repository: frodenas/gcs-resource
+  type: docker-image
+resources:
+- name: docker-image
+  source:
+    password: ((gcloud-service-account-key-file))
+    repository: eu.gcr.io/xite-cms/git-sync
+    username: _json_key
+  type: docker-image
+- name: source-code
+  type: git
+  source:
+    branch: master
+    private_key: ((github-private-key))
+    uri: git@github.com:XiteTV/git-sync.git
+- name: version
+  source:
+    bucket: concourse-releases
+    driver: gcs
+    initial_version: 5.0.1
+    json_key: ((releases-bucket-service-account-key-file))
+    key: uber-replicator/VERSION
+  type: semver
